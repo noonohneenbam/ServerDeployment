@@ -5,25 +5,23 @@ phases:
     runtime-versions:
       python: 3.7
     commands:
-      - echo 'Starting Docker Daemon...'
+      - echo 'about to call dockerd'
       - nohup /usr/local/bin/dockerd --host=unix:///var/run/docker.sock --host=tcp://127.0.0.1:2375 --storage-driver=overlay2&
-      - timeout 30 sh -c "until docker info; do echo 'Waiting for Docker...'; sleep 1; done"
-      - echo 'Installing AWS IAM Authenticator and kubectl...'
+      - timeout 15 sh -c "until docker info; do echo .; sleep 1; done"
       - curl -sS -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.10.3/2018-07-26/bin/linux/amd64/aws-iam-authenticator
       - curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.27.9/2024-01-04/bin/linux/amd64/kubectl
       - curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.27.9/2024-01-04/bin/linux/amd64/kubectl.sha256
       - sha256sum -c kubectl.sha256
       - chmod +x ./kubectl ./aws-iam-authenticator
-      - export PATH=$PWD:$PATH
-      - echo 'Installing dependencies...'
-      - echo "nameserver 8.8.8.8" >> /etc/resolv.conf
-      - apt-key adv --keyserver hkp://pool.sks-keyservers.net --recv-keys A122542AB04F24E3
-      - sleep 10
-      - apt-key adv --keyserver hkp://pool.sks-keyservers.net --recv-keys E88979FB9B30ACF2
-      - sleep 10
-      - apt-get update --allow-unauthenticated -o Acquire::Retries=3
+      - export PATH=$PWD/:$PATH
+      - python --version
+      - echo 'export PATH=$PWD/:$PATH' >> $HOME/.bashrc
+      - echo `kubectl version --short --client`
+      - python -m pip install --upgrade --force pip
+      - apt-get clean
+      - apt-get update -o Acquire::Retries=3
       - DEBIAN_FRONTEND=noninteractive apt-get -y install jq
-      - python3 -m pip install --upgrade pip awscli pytest
+      - python3 -m pip install --upgrade awscli pytest
   pre_build:
     commands:
       - TAG="$REPOSITORY_NAME.$REPOSITORY_BRANCH.$ENVIRONMENT_NAME.$(date +%Y-%m-%d.%H.%M.%S).$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)"
