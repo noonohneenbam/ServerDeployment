@@ -18,8 +18,9 @@ phases:
       - echo 'export PATH=$PWD/:$PATH' >> $HOME/.bashrc
       - echo `kubectl version --short --client`
       - python -m pip install --upgrade --force pip
+      - sleep 10
       - apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A122542AB04F24E3
-      - apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E88979FB9B30ACF2
+      - sleep 10
       - apt-get update --allow-unauthenticated -o Acquire::Retries=3
       - DEBIAN_FRONTEND=noninteractive apt-get -y install jq
       - python3 -m pip install --upgrade awscli pytest
