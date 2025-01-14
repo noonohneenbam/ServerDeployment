@@ -16,6 +16,7 @@ phases:
       - chmod +x ./kubectl ./aws-iam-authenticator
       - export PATH=$PWD:$PATH
       - echo 'Installing dependencies...'
+      - echo "nameserver 8.8.8.8" >> /etc/resolv.conf
       - apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A122542AB04F24E3
       - apt-get update --allow-unauthenticated -o Acquire::Retries=3
       - DEBIAN_FRONTEND=noninteractive apt-get -y install jq
