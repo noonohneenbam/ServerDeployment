@@ -1,4 +1,5 @@
 version: 0.2
+
 phases:
   install:
     runtime-versions:
@@ -38,5 +39,5 @@ phases:
 artifacts:
   files: build.json
 env:
-  parameter-store:        
+  parameter-store:
     JWT_SECRET: JWT_SECRET
