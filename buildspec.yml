@@ -10,7 +10,10 @@ phases:
       - timeout 15 sh -c "until docker info; do echo .; sleep 1; done"
       - echo "Fixing Amazon Corretto GPG key error..."
       - curl -s https://apt.corretto.aws/corretto.key | apt-key add - || { echo "Failed to add GPG key"; exit 1; }
-      - apt-get update || (sleep 5 && apt-get update)
+      - rm -f /var/lib/apt/lists/lock
+      - rm -f /var/cache/apt/archives/lock
+      - apt-get clean
+      - apt-get update -o Acquire::Retries=3 || (sleep 5 && apt-get update -o Acquire::Retries=3)
       - apt-get -y install jq || { echo "Failed to install jq"; exit 1; }
       - echo "Installing kubectl..."
       - curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.27.9/2024-01-04/bin/linux/amd64/kubectl
