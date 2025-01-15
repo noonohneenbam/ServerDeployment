@@ -12,8 +12,9 @@ phases:
       - curl -s https://apt.corretto.aws/corretto.key | apt-key add - || { echo "Failed to add GPG key"; exit 1; }
       - rm -f /var/lib/apt/lists/lock
       - rm -f /var/cache/apt/archives/lock
+      - sed -i '/https:\/\/dl.google.com\/linux\/chrome\/deb/d' /etc/apt/sources.list
       - apt-get clean
-      - apt-get update -o Acquire::Retries=3 || (sleep 5 && apt-get update -o Acquire::Retries=3)
+      - apt-get update -o Acquire::Retries=3 -o Dpkg::Options::='--force-confold' || (sleep 5 && apt-get update -o Acquire::Retries=3 -o Dpkg::Options::='--force-confold')
       - apt-get -y install jq || { echo "Failed to install jq"; exit 1; }
       - echo "Installing kubectl..."
       - curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.27.9/2024-01-04/bin/linux/amd64/kubectl
