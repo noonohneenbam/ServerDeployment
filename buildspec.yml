@@ -16,7 +16,7 @@ phases:
       - chmod +x ./kubectl ./aws-iam-authenticator
       - export PATH=$PWD:$PATH
       - echo 'Installing dependencies...'
-      - apt-get update -o Acquire::Retries=3
+      - apt-get update -o Acquire::Retries=3 --allow-unauthenticated
       - DEBIAN_FRONTEND=noninteractive apt-get -y install jq
       - python3 -m pip install --upgrade pip awscli pytest
   pre_build:
