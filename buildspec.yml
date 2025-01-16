@@ -6,9 +6,15 @@ phases:
       python: 3.7
     commands:
       - echo 'Starting the installation phase...'
-      - echo 'about to call dockerd'
+
+      # Fix Docker daemon issue
+      - echo 'Cleaning up Docker pid file...'
+      - rm -f /var/run/docker.pid || true
+      - echo 'Starting Docker daemon...'
       - nohup /usr/local/bin/dockerd --host=unix:///var/run/docker.sock --host=tcp://127.0.0.1:2375 --storage-driver=overlay2 &
       - timeout 15 sh -c "until docker info; do echo .; sleep 1; done"
+
+      # Install AWS IAM Authenticator and kubectl
       - echo 'Installing AWS IAM Authenticator and kubectl...'
       - curl -sS -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.10.3/2018-07-26/bin/linux/amd64/aws-iam-authenticator
       - curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.27.9/2024-01-04/bin/linux/amd64/kubectl
@@ -16,16 +22,25 @@ phases:
       - sha256sum -c kubectl.sha256
       - chmod +x ./kubectl ./aws-iam-authenticator
       - export PATH=$PWD/:$PATH
-      - python --version
       - echo 'export PATH=$PWD/:$PATH' >> $HOME/.bashrc
       - echo `kubectl version --short --client`
+
+      # Update pip
       - python -m pip install --upgrade --force pip
-      - echo 'Fixing GPG keys and cleaning repositories...'
+
+      # Fix GPG keys and repository conflicts
+      - echo 'Fixing GPG keys...'
+      - curl -fsSL https://apt.corretto.aws/corretto.key | gpg --dearmor > /usr/share/keyrings/corretto-archive-keyring.gpg
+      - echo "deb [signed-by=/usr/share/keyrings/corretto-archive-keyring.gpg] https://apt.corretto.aws stable main" | tee /etc/apt/sources.list.d/corretto.list
       - curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
-      - sed -i '/corretto/d' /etc/apt/sources.list.d/corretto.list || true
+      - apt-get clean
       - apt-get update -o Acquire::Retries=5
+
+      # Install dependencies
+      - echo 'Installing dependencies...'
       - apt-get -y install jq
       - pip install --upgrade awscli pytest
+
   pre_build:
     commands:
       - echo 'Starting the pre-build phase...'
@@ -35,21 +50,23 @@ phases:
       - export KUBECONFIG=$HOME/.kube/config
       - echo `ls -l`
       - pip install -r requirements.txt
+
   build:
     commands:
       - echo 'Starting the build phase...'
       - docker build --tag $REPOSITORY_URI:$TAG .
+
   post_build:
     commands:
       - echo 'Starting the post-build phase...'
       - docker push $REPOSITORY_URI:$TAG
-      - echo $EKS_CLUSTER_NAME
-      - echo $EKS_KUBECTL_ROLE_ARN
       - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --role-arn $EKS_KUBECTL_ROLE_ARN
       - kubectl apply -f simple_jwt_api1.yml
       - printf '[{"name":"simple_jwt_api1","imageUri":"%s"}]' $REPOSITORY_URI:$TAG > build.json
+
 artifacts:
   files: build.json
+
 env:
   parameter-store:
     JWT_SECRET: JWT_SECRET
