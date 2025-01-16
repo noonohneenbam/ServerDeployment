@@ -16,7 +16,7 @@ phases:
       - chmod +x ./kubectl ./aws-iam-authenticator
       - export PATH=$PWD/:$PATH
       - echo 'export PATH=$PWD/:$PATH' >> $HOME/.bashrc
-      - echo "kubectl version: $(kubectl version --short --client)"
+      - kubectl version --short --client
 
       # Update pip
       - echo 'Upgrading pip...'
