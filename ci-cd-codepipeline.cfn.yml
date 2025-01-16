@@ -33,7 +33,7 @@ Parameters:
   GitHubToken:
     Type: String
     NoEcho: true
-    Description: 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
+    Description: myFSNDstack1-CodePipelineGitHub-QizuvQFPC9kO
     MinLength: 3
     MaxLength: 100
     ConstraintDescription: You must enter a GitHub personal access token
