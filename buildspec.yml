@@ -7,12 +7,18 @@ phases:
     commands:
       - echo 'Starting the installation phase...'
 
-      # Fix Docker daemon issue
-      - echo 'Cleaning up Docker pid file...'
-      - rm -f /var/run/docker.pid || true
+      # Clean up any existing Docker process or leftover PID file
+      - echo 'Cleaning up Docker...'
+      - sudo pkill dockerd || true
+      - sudo rm -f /var/run/docker.pid
+
+      # Start Docker daemon
       - echo 'Starting Docker daemon...'
       - nohup /usr/local/bin/dockerd --host=unix:///var/run/docker.sock --host=tcp://127.0.0.1:2375 --storage-driver=overlay2 &
-      - timeout 15 sh -c "until docker info; do echo .; sleep 1; done"
+      
+      # Increase the timeout for Docker initialization to ensure it starts
+      - echo 'Waiting for Docker to initialize...'
+      - timeout 30 sh -c "until docker info; do echo Waiting for Docker...; sleep 2; done"
 
       # Install AWS IAM Authenticator and kubectl
       - echo 'Installing AWS IAM Authenticator and kubectl...'
@@ -28,41 +34,30 @@ phases:
       # Update pip
       - python -m pip install --upgrade --force pip
 
-      # Fix GPG keys and repository conflicts
-      - echo 'Fixing GPG keys...'
-      - curl -fsSL https://apt.corretto.aws/corretto.key | gpg --dearmor > /usr/share/keyrings/corretto-archive-keyring.gpg
-      - echo "deb [signed-by=/usr/share/keyrings/corretto-archive-keyring.gpg] https://apt.corretto.aws stable main" | tee /etc/apt/sources.list.d/corretto.list
+      # Fix GPG keys and install dependencies
+      - echo 'Adding GPG keys...'
       - curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
-      - apt-get clean
-      - apt-get update -o Acquire::Retries=5
-
-      # Install dependencies
-      - echo 'Installing dependencies...'
-      - apt-get -y install jq
-      - pip install --upgrade awscli pytest
+      - apt-get update && apt-get -y install jq && pip install --upgrade awscli pytest
 
   pre_build:
     commands:
-      - echo 'Starting the pre-build phase...'
       - TAG="$REPOSITORY_NAME.$REPOSITORY_BRANCH.$ENVIRONMENT_NAME.$(date +%Y-%m-%d.%H.%M.%S).$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)"
-      - sed -i 's@CONTAINER_IMAGE@'"$REPOSITORY_URI:$TAG"'@' simple_jwt_api1.yml
-      - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)
+      - sed -i 's@CONTAINER_IMAGE@'"$REPOSITORY_URI:$TAG"'@' simple_jwt_api.yml
+      - $(aws ecr get-login --no-include-email)
       - export KUBECONFIG=$HOME/.kube/config
       - echo `ls -l`
       - pip install -r requirements.txt
 
   build:
     commands:
-      - echo 'Starting the build phase...'
       - docker build --tag $REPOSITORY_URI:$TAG .
 
   post_build:
     commands:
-      - echo 'Starting the post-build phase...'
       - docker push $REPOSITORY_URI:$TAG
       - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --role-arn $EKS_KUBECTL_ROLE_ARN
-      - kubectl apply -f simple_jwt_api1.yml
-      - printf '[{"name":"simple_jwt_api1","imageUri":"%s"}]' $REPOSITORY_URI:$TAG > build.json
+      - kubectl apply -f simple_jwt_api.yml
+      - printf '[{"name":"simple_jwt_api","imageUri":"%s"}]' $REPOSITORY_URI:$TAG > build.json
 
 artifacts:
   files: build.json
