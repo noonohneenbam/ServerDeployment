@@ -3,25 +3,9 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      python: 3.7
+      python: 3.x
     commands:
-      - echo 'Starting the installation phase...'
-
-      # Fix Corretto repository duplicate entries
-      - echo 'Fixing Amazon Corretto repository duplicates...'
-      - rm -f /etc/apt/sources.list.d/corretto.list
-
-      # Fix Google Chrome repository GPG key
-      - echo 'Adding missing GPG key for Google Chrome repository...'
-      - curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome-keyring.gpg
-      - echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] https://dl.google.com/linux/chrome/deb stable main" | tee /etc/apt/sources.list.d/google-chrome.list
-
-      # Restart Docker setup to avoid conflicts
-      - echo 'Cleaning up Docker processes...'
-      - sudo pkill dockerd || true
-      - sudo rm -f /var/run/docker.pid
-      - nohup /usr/local/bin/dockerd --host=unix:///var/run/docker.sock --host=tcp://127.0.0.1:2375 --storage-driver=overlay2 &
-      - timeout 30 sh -c "until docker info; do echo Waiting for Docker...; sleep 2; done"
+      - echo 'Starting the install phase...'
 
       # Install AWS IAM Authenticator and kubectl
       - echo 'Installing AWS IAM Authenticator and kubectl...'
@@ -32,37 +16,33 @@ phases:
       - chmod +x ./kubectl ./aws-iam-authenticator
       - export PATH=$PWD/:$PATH
       - echo 'export PATH=$PWD/:$PATH' >> $HOME/.bashrc
-      - echo `kubectl version --short --client`
+      - echo "kubectl version: $(kubectl version --short --client)"
 
       # Update pip
+      - echo 'Upgrading pip...'
       - python -m pip install --upgrade --force pip
 
-      # Update and install required packages
-      - apt-get update && apt-get -y install jq && pip install --upgrade awscli pytest
+      # Update Amazon Corretto GPG Key
+      - echo 'Updating Amazon Corretto GPG key...'
+      - curl -fsSL https://apt.corretto.aws/corretto.key | gpg --dearmor -o /usr/share/keyrings/corretto-keyring.gpg
+      - echo "deb [arch=amd64 signed-by=/usr/share/keyrings/corretto-keyring.gpg] https://apt.corretto.aws stable main" | tee /etc/apt/sources.list.d/corretto.list
 
-  pre_build:
-    commands:
-      - TAG="$REPOSITORY_NAME.$REPOSITORY_BRANCH.$ENVIRONMENT_NAME.$(date +%Y-%m-%d.%H.%M.%S).$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)"
-      - sed -i 's@CONTAINER_IMAGE@'"$REPOSITORY_URI:$TAG"'@' simple_jwt_api.yml
-      - $(aws ecr get-login --no-include-email)
-      - export KUBECONFIG=$HOME/.kube/config
-      - echo `ls -l`
-      - pip install -r requirements.txt
+      # Update package lists and install jq
+      - echo 'Running apt-get update and installing dependencies...'
+      - apt-get update && apt-get -y install jq
+
+      # Install AWS CLI and pytest
+      - echo 'Installing awscli and pytest...'
+      - pip install --upgrade awscli pytest
 
   build:
     commands:
-      - docker build --tag $REPOSITORY_URI:$TAG .
+      - echo 'Build phase not configured.'
 
   post_build:
     commands:
-      - docker push $REPOSITORY_URI:$TAG
-      - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --role-arn $EKS_KUBECTL_ROLE_ARN
-      - kubectl apply -f simple_jwt_api.yml
-      - printf '[{"name":"simple_jwt_api","imageUri":"%s"}]' $REPOSITORY_URI:$TAG > build.json
+      - echo 'Post-build phase not configured.'
 
 artifacts:
-  files: build.json
-
-env:
-  parameter-store:
-    JWT_SECRET: JWT_SECRET
+  files:
+    - '**/*'
