@@ -2,13 +2,9 @@ version: 0.2
 
 phases:
   install:
-    runtime-versions:
-      python: 3.x
     commands:
-      - echo 'Starting the install phase...'
-
-      # Install AWS IAM Authenticator and kubectl
-      - echo 'Installing AWS IAM Authenticator and kubectl...'
+      - echo "Starting the install phase..."
+      - echo "Installing AWS IAM Authenticator and kubectl..."
       - curl -sS -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.10.3/2018-07-26/bin/linux/amd64/aws-iam-authenticator
       - curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.27.9/2024-01-04/bin/linux/amd64/kubectl
       - curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.27.9/2024-01-04/bin/linux/amd64/kubectl.sha256
@@ -17,32 +13,30 @@ phases:
       - export PATH=$PWD/:$PATH
       - echo 'export PATH=$PWD/:$PATH' >> $HOME/.bashrc
       - kubectl version --short --client
-
-      # Update pip
-      - echo 'Upgrading pip...'
+      - echo "Upgrading pip..."
       - python -m pip install --upgrade --force pip
-
-      # Update Amazon Corretto GPG Key
-      - echo 'Updating Amazon Corretto GPG key...'
+      - echo "Fixing repository issues and updating GPG keys..."
+      - curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
+      - echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb stable main" | tee /etc/apt/sources.list.d/google-chrome.list
       - curl -fsSL https://apt.corretto.aws/corretto.key | gpg --dearmor -o /usr/share/keyrings/corretto-keyring.gpg
       - echo "deb [arch=amd64 signed-by=/usr/share/keyrings/corretto-keyring.gpg] https://apt.corretto.aws stable main" | tee /etc/apt/sources.list.d/corretto.list
-
-      # Update package lists and install jq
-      - echo 'Running apt-get update and installing dependencies...'
-      - apt-get update && apt-get -y install jq
-
-      # Install AWS CLI and pytest
-      - echo 'Installing awscli and pytest...'
-      - pip install --upgrade awscli pytest
+      - apt-get update
+      - apt-get -y install jq
 
   build:
     commands:
-      - echo 'Build phase not configured.'
+      - echo "Starting the build phase..."
+      - echo "Your build commands go here."
 
   post_build:
     commands:
-      - echo 'Post-build phase not configured.'
+      - echo "Starting the post-build phase..."
+      - echo "Your post-build commands go here."
 
 artifacts:
   files:
     - '**/*'
+
+cache:
+  paths:
+    - '/root/.cache/pip'
