@@ -7,12 +7,17 @@ phases:
     commands:
       - echo 'Starting the installation phase...'
 
-      # Fix GPG key for Amazon Corretto
-      - echo 'Updating GPG key for Amazon Corretto...'
-      - curl -fsSL https://apt.corretto.aws/corretto.key | gpg --dearmor -o /usr/share/keyrings/corretto-keyring.gpg
-      - echo "deb [signed-by=/usr/share/keyrings/corretto-keyring.gpg] https://apt.corretto.aws stable main" | tee /etc/apt/sources.list.d/corretto.list
+      # Fix Corretto repository duplicate entries
+      - echo 'Fixing Amazon Corretto repository duplicates...'
+      - rm -f /etc/apt/sources.list.d/corretto.list
 
-      # Clean up and ensure Docker setup works
+      # Fix Google Chrome repository GPG key
+      - echo 'Adding missing GPG key for Google Chrome repository...'
+      - curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome-keyring.gpg
+      - echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-keyring.gpg] https://dl.google.com/linux/chrome/deb stable main" | tee /etc/apt/sources.list.d/google-chrome.list
+
+      # Restart Docker setup to avoid conflicts
+      - echo 'Cleaning up Docker processes...'
       - sudo pkill dockerd || true
       - sudo rm -f /var/run/docker.pid
       - nohup /usr/local/bin/dockerd --host=unix:///var/run/docker.sock --host=tcp://127.0.0.1:2375 --storage-driver=overlay2 &
@@ -34,6 +39,7 @@ phases:
 
       # Update and install required packages
       - apt-get update && apt-get -y install jq && pip install --upgrade awscli pytest
+
   pre_build:
     commands:
       - TAG="$REPOSITORY_NAME.$REPOSITORY_BRANCH.$ENVIRONMENT_NAME.$(date +%Y-%m-%d.%H.%M.%S).$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)"
